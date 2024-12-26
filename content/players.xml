@@ -1,0 +1,6 @@
+<players root="gfx_ma/characters/" portraitroot="gfx_ma/characters/" nameimageroot="gfx_ma/characters/">
+	<player name="Mittle" skin="mittle_sheet.png" hp="6"
+        nameimage="mittle_name.png" 
+        portrait="mittle_portrait.png" skinColor="-1"
+		birthright="???"/>
+</players>
