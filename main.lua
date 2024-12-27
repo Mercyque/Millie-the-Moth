@@ -13,4 +13,3 @@ for _, v in ipairs({
 }) do
     include("scripts_ma.characters." .. v)
 end
-Isaac.GetPlayer():AnimateCard(Card.CARD_FOOL)
