@@ -4,6 +4,7 @@ local SPELL_UI_FADE_OUT = 0.6
 local SPELL_SLOT_SPREAD = Vector(17.5, 0)
 local SPELL_UI_Y_OFFSET = Vector(0, -40)
 local SPELL_UI_OFFSET_SPRITESCALE = Vector(0, -32)
+local SPELL_SELECT_MOUSE_RANGE = math.huge
 
 ---@return Sprite
 local function FrameSprite()
@@ -31,7 +32,9 @@ end
 ---@class MittleData
 ---@field FrameSprites Sprite[]
 ---@field HoldingTab boolean
----@field SelectedSlot integer
+
+---@class MittleSave
+---@field SelectedSpell integer
 
 ---@param player EntityPlayer
 ---@return MittleData
@@ -39,8 +42,48 @@ local function GetData(player)
     return MothsAflame:GetData(player, "Mittle", nil, {
         FrameSprites = CreateFrameSprites(),
         HoldingTab = false,
-        SelectedSlot = 1
     })
+end
+
+---@param player EntityPlayer
+---@return MittleSave
+local function GetSave(player)
+    return MothsAflame:GetData(player, "Mittle", ksil.DataPersistenceMode.RUN, {
+        SelectedSpell = 1
+    })
+end
+
+---@param player EntityPlayer
+---@return Vector
+local function GetSlotAnchor(player)
+    return Isaac.WorldToScreen(player.Position) + SPELL_UI_Y_OFFSET + SPELL_UI_OFFSET_SPRITESCALE * (player.SpriteScale.Y - 1)
+end
+
+---@param index integer
+---@return Vector
+local function GetSlotOffset(index)
+    return SPELL_SLOT_SPREAD * index - SPELL_SLOT_SPREAD * (NUM_SPELL_SLOTS + 1) / 2
+end
+
+---@param player EntityPlayer
+---@param index integer
+---@return Vector
+local function GetSlotPos(player, index)
+    return GetSlotAnchor(player) + GetSlotOffset(index)
+end
+
+---@param player EntityPlayer
+---@param index integer
+local function SelectSpell(player, index)
+    local save = GetSave(player)
+
+    if index > save.SelectedSpell then
+        SFXManager():Play(SoundEffect.SOUND_CHARACTER_SELECT_RIGHT, nil, 0)
+    elseif index < save.SelectedSpell then
+        SFXManager():Play(SoundEffect.SOUND_CHARACTER_SELECT_LEFT, nil, 0)
+    end
+
+    save.SelectedSpell = index
 end
 
 local emptySprite = Sprite()
@@ -57,18 +100,38 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
             sprite.Color.A = MothsAflame:Lerp(sprite.Color.A, 1, SPELL_UI_FADE_IN)
         end
 
-        if data.SelectedSlot < NUM_SPELL_SLOTS and Input.IsActionTriggered(ButtonAction.ACTION_SHOOTRIGHT, player.ControllerIndex) then
-            data.SelectedSlot = data.SelectedSlot + 1
-            SFXManager():Play(SoundEffect.SOUND_CHARACTER_SELECT_RIGHT)
+        local save = GetSave(player)
+
+        if save.SelectedSpell < NUM_SPELL_SLOTS and Input.IsActionTriggered(ButtonAction.ACTION_SHOOTRIGHT, player.ControllerIndex) then
+            SelectSpell(player, save.SelectedSpell + 1)
         end
 
-        if data.SelectedSlot > 1 and Input.IsActionTriggered(ButtonAction.ACTION_SHOOTLEFT, player.ControllerIndex) then
-            data.SelectedSlot = data.SelectedSlot - 1
-            SFXManager():Play(SoundEffect.SOUND_CHARACTER_SELECT_LEFT)
+        if save.SelectedSpell > 1 and Input.IsActionTriggered(ButtonAction.ACTION_SHOOTLEFT, player.ControllerIndex) then
+            SelectSpell(player, save.SelectedSpell - 1)
         end
 
         if player:IsExtraAnimationFinished() then
             player:AnimatePickup(emptySprite, true, "LiftItem")
+        end
+
+        if player.ControllerIndex == 0 then
+            if Input.IsMouseBtnPressed(0) then
+                local mousePos = Isaac.WorldToScreen(Input.GetMousePosition(true))
+                local closestSlot, closestPos
+
+                for i = 1, NUM_SPELL_SLOTS do
+                    local slotPos = GetSlotPos(player, i)
+
+                    if not closestSlot or mousePos:Distance(slotPos) < mousePos:Distance(closestPos) then
+                        closestSlot = i
+                        closestPos = slotPos
+                    end
+                end
+
+                if closestSlot and mousePos:Distance(closestPos) < SPELL_SELECT_MOUSE_RANGE then
+                    SelectSpell(player, closestSlot)
+                end
+            end
         end
     else
         for _, sprite in ipairs(data.FrameSprites) do
@@ -85,10 +148,10 @@ end)
 
 ---@param player EntityPlayer
 local function TempSelectionRenderer(player)
-    local data = GetData(player)
+    local save = GetSave(player)
     local pos = Isaac.WorldToScreen(player.Position)
 
-    Isaac.RenderText(tostring(data.SelectedSlot), pos.X - 20, pos.Y, 1, 1, 1, 1)
+    Isaac.RenderText(tostring(save.SelectedSpell), pos.X - 20, pos.Y, 1, 1, 1, 1)
 end
 
 ---@param player EntityPlayer
@@ -100,10 +163,10 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function (_, player)
     TempSelectionRenderer(player)
 
     if data.FrameSprites[1].Color.A > 0.0005 then
-        local playerPos = Isaac.WorldToScreen(player.Position) + SPELL_UI_Y_OFFSET + SPELL_UI_OFFSET_SPRITESCALE * (player.SpriteScale.Y - 1)
+        local playerPos = GetSlotAnchor(player)
 
         for i, sprite in ipairs(data.FrameSprites) do
-            local adjustedPos = playerPos + SPELL_SLOT_SPREAD * i - SPELL_SLOT_SPREAD * (NUM_SPELL_SLOTS + 1) / 2
+            local adjustedPos = playerPos + GetSlotOffset(i)
 
             sprite:Render(adjustedPos)
         end
