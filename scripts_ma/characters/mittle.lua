@@ -1,4 +1,4 @@
-local NUM_SPELL_SLOTS = 4
+local NUM_SPELL_SLOTS = 5
 local SPELL_UI_FADE_IN = 0.3
 local SPELL_UI_FADE_OUT = 0.6
 local SPELL_SLOT_SPREAD = Vector(17.5, 0)
