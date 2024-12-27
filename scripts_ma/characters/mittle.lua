@@ -5,6 +5,7 @@ local SPELL_SLOT_SPREAD = Vector(17.5, 0)
 local SPELL_UI_Y_OFFSET = Vector(0, -40)
 local SPELL_UI_OFFSET_SPRITESCALE = Vector(0, -32)
 local SPELL_SELECT_MOUSE_RANGE = math.huge
+local DEFAULT_SPELL = (NUM_SPELL_SLOTS + 1) // 2
 
 ---@return Sprite
 local function FrameSprite()
@@ -49,7 +50,7 @@ end
 ---@return MittleSave
 local function GetSave(player)
     return MothsAflame:GetData(player, "Mittle", ksil.DataPersistenceMode.RUN, {
-        SelectedSpell = 1
+        SelectedSpell = DEFAULT_SPELL
     })
 end
 
@@ -83,6 +84,12 @@ local function SelectSpell(player, index)
         SFXManager():Play(SoundEffect.SOUND_CHARACTER_SELECT_LEFT, nil, 0)
     end
 
+    if index > NUM_SPELL_SLOTS then
+        index = 1
+    elseif index < 1 then
+        index = NUM_SPELL_SLOTS
+    end
+
     save.SelectedSpell = index
 end
 
@@ -102,11 +109,11 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
 
         local save = GetSave(player)
 
-        if save.SelectedSpell < NUM_SPELL_SLOTS and Input.IsActionTriggered(ButtonAction.ACTION_SHOOTRIGHT, player.ControllerIndex) then
+        if Input.IsActionTriggered(ButtonAction.ACTION_SHOOTRIGHT, player.ControllerIndex) then
             SelectSpell(player, save.SelectedSpell + 1)
         end
 
-        if save.SelectedSpell > 1 and Input.IsActionTriggered(ButtonAction.ACTION_SHOOTLEFT, player.ControllerIndex) then
+        if Input.IsActionTriggered(ButtonAction.ACTION_SHOOTLEFT, player.ControllerIndex) then
             SelectSpell(player, save.SelectedSpell - 1)
         end
 
@@ -141,6 +148,12 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
 
     if not holdingTab and data.HoldingTab then
         player:AnimatePickup(emptySprite, true, "HideItem")
+    end
+
+    if holdingTab and not data.HoldingTab then
+        local save = GetSave(player)
+
+        save.SelectedSpell = DEFAULT_SPELL
     end
 
     data.HoldingTab = holdingTab
