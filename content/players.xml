@@ -1,4 +1,4 @@
-<players root="gfx_ma/characters/costumes/" portraitroot="gfx_ma/ui/" nameimageroot="gfx_ma/ui/">
+<players root="gfx_ma/characters/costumes/" portraitroot="gfx_ma/player/" nameimageroot="gfx_ma/player/">
 	<player name="Mittle" skin="character_mittle.png" hp="6"
         nameimage="mittle_name.png" costumeSuffix="ma_mittle"
         portrait="mittle_portrait.png" skinColor="-1" costume="87"

@@ -11,15 +11,15 @@ local DEFAULT_SPELL = (NUM_SPELL_SLOTS + 1) // 2
 local function FrameSprite()
     local sprite = Sprite()
 
-    sprite:Load("gfx/ui/ui_inventory.anm2", true)
-    sprite:Play("Idle", true)
+    sprite:Load("gfx_ma/ui_inventory.anm2", true)
+    sprite:Play("Pip", true)
     sprite.Color = MothsAflame.Color.WHITE_ZERO_ALPHA
 
     return sprite
 end
 
 ---@return Sprite[]
-local function CreateFrameSprites()
+local function CreateSlotSprites()
     ---@type Sprite[]
     local sprites = {}
 
@@ -30,25 +30,21 @@ local function CreateFrameSprites()
     return sprites
 end
 
----@class MittleData
----@field FrameSprites Sprite[]
----@field HoldingTab boolean
-
----@class MittleSave
----@field SelectedSpell integer
-
 ---@param player EntityPlayer
----@return MittleData
 local function GetData(player)
+    ---@class MittleData
+    ---@field SlotSprites Sprite[]
+    ---@field HoldingTab boolean
     return MothsAflame:GetData(player, "Mittle", nil, {
-        FrameSprites = CreateFrameSprites(),
+        SlotSprites = CreateSlotSprites(),
         HoldingTab = false,
     })
 end
 
 ---@param player EntityPlayer
----@return MittleSave
 local function GetSave(player)
+    ---@class MittleSave
+    ---@field SelectedSpell integer
     return MothsAflame:GetData(player, "Mittle", ksil.DataPersistenceMode.RUN, {
         SelectedSpell = DEFAULT_SPELL
     })
@@ -75,13 +71,17 @@ end
 
 ---@param player EntityPlayer
 ---@param index integer
-local function SelectSpell(player, index)
+---@param noSFX? boolean
+local function SelectSpell(player, index, noSFX)
     local save = GetSave(player)
+    local data = GetData(player)
 
-    if index > save.SelectedSpell then
-        SFXManager():Play(SoundEffect.SOUND_CHARACTER_SELECT_RIGHT, nil, 0)
-    elseif index < save.SelectedSpell then
-        SFXManager():Play(SoundEffect.SOUND_CHARACTER_SELECT_LEFT, nil, 0)
+    if not noSFX then
+        if index > save.SelectedSpell then
+            SFXManager():Play(SoundEffect.SOUND_CHARACTER_SELECT_RIGHT, nil, 0)
+        elseif index < save.SelectedSpell then
+            SFXManager():Play(SoundEffect.SOUND_CHARACTER_SELECT_LEFT, nil, 0)
+        end
     end
 
     if index > NUM_SPELL_SLOTS then
@@ -91,9 +91,17 @@ local function SelectSpell(player, index)
     end
 
     save.SelectedSpell = index
-end
 
-local emptySprite = Sprite()
+    for i, sprite in ipairs(data.SlotSprites) do
+        if i == index then
+            sprite:PlayOverlay("Frame", true)
+        else
+            sprite:RemoveOverlay()
+        end
+    end
+
+    MothsAflame:AddCacheFlags(player, CacheFlag.CACHE_ALL)
+end
 
 ---@param player EntityPlayer
 MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
@@ -103,7 +111,7 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
     local holdingTab = Input.IsActionPressed(ButtonAction.ACTION_MAP, player.ControllerIndex)
 
     if holdingTab then
-        for _, sprite in ipairs(data.FrameSprites) do
+        for _, sprite in ipairs(data.SlotSprites) do
             sprite.Color.A = MothsAflame:Lerp(sprite.Color.A, 1, SPELL_UI_FADE_IN)
         end
 
@@ -118,7 +126,7 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
         end
 
         if player:IsExtraAnimationFinished() then
-            player:AnimatePickup(emptySprite, true, "LiftItem")
+            player:AnimatePickup(MothsAflame.Sprite.EMPTY, true, "LiftItem")
         end
 
         if player.ControllerIndex == 0 then
@@ -141,31 +149,29 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
             end
         end
     else
-        for _, sprite in ipairs(data.FrameSprites) do
+        for _, sprite in ipairs(data.SlotSprites) do
             sprite.Color.A = MothsAflame:Lerp(sprite.Color.A, 0, SPELL_UI_FADE_OUT)
         end
     end
 
     if not holdingTab and data.HoldingTab then
-        player:AnimatePickup(emptySprite, true, "HideItem")
+        player:AnimatePickup(MothsAflame.Sprite.EMPTY, true, "HideItem")
     end
 
     if holdingTab and not data.HoldingTab then
-        local save = GetSave(player)
-
-        save.SelectedSpell = DEFAULT_SPELL
+        SelectSpell(player, DEFAULT_SPELL, true)
     end
 
     data.HoldingTab = holdingTab
 end)
 
----@param player EntityPlayer
-local function TempSelectionRenderer(player)
-    local save = GetSave(player)
-    local pos = Isaac.WorldToScreen(player.Position)
+-- ---@param player EntityPlayer
+-- local function TempSelectionRenderer(player)
+--     local save = GetSave(player)
+--     local pos = Isaac.WorldToScreen(player.Position)
 
-    Isaac.RenderText(tostring(save.SelectedSpell), pos.X - 20, pos.Y, 1, 1, 1, 1)
-end
+--     Isaac.RenderText(tostring(save.SelectedSpell), pos.X - 20, pos.Y, 1, 1, 1, 1)
+-- end
 
 ---@param player EntityPlayer
 MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function (_, player)
@@ -173,12 +179,12 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function (_, player)
 
     local data = GetData(player)
 
-    TempSelectionRenderer(player)
+    -- TempSelectionRenderer(player)
 
-    if data.FrameSprites[1].Color.A > 0.0005 then
+    if data.SlotSprites[1].Color.A > 0.0005 then
         local playerPos = GetSlotAnchor(player)
 
-        for i, sprite in ipairs(data.FrameSprites) do
+        for i, sprite in ipairs(data.SlotSprites) do
             local adjustedPos = playerPos + GetSlotOffset(i)
 
             sprite:Render(adjustedPos)
