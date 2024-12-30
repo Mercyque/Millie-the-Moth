@@ -1,16 +1,17 @@
 local NUM_SPELL_SLOTS = 4
-local SPELL_UI_FADE_IN = 0.3
-local SPELL_UI_FADE_OUT = 0.6
-local SPELL_SLOT_SPREAD = 40
+local SPELL_UI_FADE_IN = 0.4
+local SPELL_UI_FADE_OUT = 0.5
 local SPELL_UI_Y_OFFSET = Vector(0, -17.5)
 local SPELL_SELECT_MOUSE_RANGE = math.huge
 local DEFAULT_SPELL = NUM_SPELL_SLOTS + 1
 local SLOT_OFFSETS = {
-    Vector(SPELL_SLOT_SPREAD, 0),
-    Vector(0, SPELL_SLOT_SPREAD),
-    Vector(-SPELL_SLOT_SPREAD, 0),
-    Vector(0, -SPELL_SLOT_SPREAD)
+    Vector(40, 0),
+    Vector(0, 35),
+    Vector(-40, 0),
+    Vector(0, -35)
 }
+local SPELL_NAME_OFFSET = 45
+local SPELL_NAME_LINE_SPACING = 10
 local SpellSlot = {
     RIGHT = 1,
     DOWN = 2,
@@ -24,19 +25,37 @@ local Spell = {
     EARTH = 4,
     CANTRIP = 5,
 }
+local SPELL_TO_NAME = {
+    [Spell.WATER] = {"CREEPING TIDALPILLARS"},
+    [Spell.AIR] = {"SURGING WINDS"},
+    [Spell.FIRE] = {"MOTHS TO THE FLAME"},
+    [Spell.EARTH] = {"CLAY WEAVERS"},
+    [Spell.CANTRIP] = {"CANTRIP"},
+}
+local SPELL_TO_GFX = {
+    [Spell.WATER] = "gfx_ma/ui/spell_tidalpillars.png",
+    [Spell.AIR] = "gfx_ma/ui/spell_surgingwinds.png",
+    [Spell.FIRE] = "gfx_ma/ui/spell_mothstotheflame.png",
+    [Spell.EARTH] = "gfx_ma/ui/spell_clayweavers.png",
+    [Spell.CANTRIP] = "",
+}
 local ACTION_TO_SPELL_SLOT  = {
     [ButtonAction.ACTION_SHOOTRIGHT] = SpellSlot.RIGHT,
     [ButtonAction.ACTION_SHOOTDOWN] = SpellSlot.DOWN,
     [ButtonAction.ACTION_SHOOTLEFT] = SpellSlot.LEFT,
     [ButtonAction.ACTION_SHOOTUP] = SpellSlot.UP,
 }
+local spellFont = Font() spellFont:Load("font/luaminioutlined.fnt")
 
+---@param index integer
 ---@return Sprite
-local function FrameSprite()
+local function FrameSprite(index)
     local sprite = Sprite()
 
-    sprite:Load("gfx_ma/ui_inventory.anm2", true)
-    sprite:Play("Pip", true)
+    sprite:Load("gfx_ma/ui_spell.anm2", true)
+    sprite:Play("Idle", true)
+    sprite:ReplaceSpritesheet(0, SPELL_TO_GFX[index])
+    sprite:LoadGraphics()
     sprite.Color = MothsAflame.Color.WHITE_ZERO_ALPHA
 
     return sprite
@@ -48,7 +67,7 @@ local function CreateSlotSprites()
     local sprites = {}
 
     for i = 1, NUM_SPELL_SLOTS do
-        sprites[i] = FrameSprite()
+        sprites[i] = FrameSprite(i)
     end
 
     return sprites
@@ -104,9 +123,9 @@ local function SelectSpell(player, index, noSFX)
 
     for i, sprite in ipairs(data.SlotSprites) do
         if i == index then
-            sprite:PlayOverlay("Frame", true)
+            sprite:Play("Selected", true)
         else
-            sprite:RemoveOverlay()
+            sprite:Play("Idle", true)
         end
     end
 
@@ -172,20 +191,10 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
 end)
 
 ---@param player EntityPlayer
-local function TempSelectionRenderer(player)
-    local save = GetSave(player)
-    local pos = Isaac.WorldToScreen(player.Position)
-
-    Isaac.RenderText(tostring(save.SelectedSpell), pos.X - 20, pos.Y, 1, 1, 1, 1)
-end
-
----@param player EntityPlayer
-MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function (_, player)
+local function OnRender(player)
     if Game():GetRoom():GetRenderMode() == RenderMode.RENDER_WATER_REFLECT then return end
 
     local data = GetData(player)
-
-    TempSelectionRenderer(player)
 
     if data.SlotSprites[1].Color.A > 0.0005 then
         local playerPos = GetSlotAnchor(player)
@@ -195,5 +204,36 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function (_, player)
 
             sprite:Render(adjustedPos)
         end
+
+        for i, v in pairs(SPELL_TO_NAME[GetSave(player).SelectedSpell]) do
+            spellFont:DrawString(v, playerPos.X, playerPos.Y + SPELL_NAME_LINE_SPACING * (i - 1) + SPELL_NAME_OFFSET, KColor(1, 1, 1, data.SlotSprites[1].Color.A), 1, true)
+        end
     end
-end)
+end
+
+if REPENTOGON then
+    ---@diagnostic disable-next-line: undefined-field
+    MothsAflame:AddCallback(ModCallbacks.MC_HUD_RENDER, function ()
+        for _, player in ipairs(MothsAflame:GetPlayers()) do
+            OnRender(player)
+        end
+    end)
+else
+    ---@param str string
+    MothsAflame:AddCallback(ModCallbacks.MC_GET_SHADER_PARAMS, function (_, str)
+        if str ~= MothsAflame.Shader.HUD then return end
+
+        if not Game():IsPaused() then
+            for _, player in ipairs(MothsAflame:GetPlayers()) do
+                OnRender(player)
+            end
+        end
+    end)
+    MothsAflame:AddCallback(ModCallbacks.MC_POST_RENDER, function ()
+        if Game():IsPaused() then
+            for _, player in ipairs(MothsAflame:GetPlayers()) do
+                OnRender(player)
+            end
+        end
+    end)
+end

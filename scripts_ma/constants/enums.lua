@@ -9,3 +9,7 @@ MothsAflame.Color = {
 MothsAflame.Sprite = {
     EMPTY = Sprite()
 }
+
+MothsAflame.Shader = {
+    HUD = "MothsAflameHUD"
+}
