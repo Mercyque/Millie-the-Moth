@@ -1,6 +1,6 @@
 local NUM_SPELL_SLOTS = 4
-local SPELL_UI_FADE_IN = 0.4
-local SPELL_UI_FADE_OUT = 0.5
+local UI_FADE_IN = 0.4
+local UI_FADE_OUT = 0.5
 local SPELL_UI_Y_OFFSET = Vector(0, -17.5)
 local SPELL_SELECT_MOUSE_RANGE = math.huge
 local DEFAULT_SPELL = NUM_SPELL_SLOTS + 1
@@ -10,8 +10,11 @@ local SLOT_OFFSETS = {
     Vector(-40, 0),
     Vector(0, -35)
 }
+local RENDER_ALPHA_THRESHOLD = 0.0005
 local SPELL_NAME_OFFSET = 45
 local SPELL_NAME_LINE_SPACING = 10
+local MANA_BAR_OFFSET = Vector(0, -40)
+local SPRITESCALE_Y_OFFSET = Vector(0, -34)
 local SpellSlot = {
     RIGHT = 1,
     DOWN = 2,
@@ -30,7 +33,7 @@ local SPELL_TO_NAME = {
     [Spell.AIR] = {"SURGING WINDS"},
     [Spell.FIRE] = {"MOTHS TO THE FLAME"},
     [Spell.EARTH] = {"CLAY WEAVERS"},
-    [Spell.CANTRIP] = {"CANTRIP"},
+    [Spell.CANTRIP] = {"CANTRIP!"},
 }
 local SPELL_TO_GFX = {
     [Spell.WATER] = "gfx_ma/ui/spell_tidalpillars.png",
@@ -61,6 +64,16 @@ local function FrameSprite(index)
     return sprite
 end
 
+---@return Sprite
+local function ManaBarSprite()
+    local sprite = Sprite()
+
+    sprite:Load("gfx_ma/ui_manabar.anm2", true)
+    sprite:Play("Idle", true)
+
+    return sprite
+end
+
 ---@return Sprite[]
 local function CreateSlotSprites()
     ---@type Sprite[]
@@ -78,9 +91,11 @@ local function GetData(player)
     ---@class MittleData
     ---@field SlotSprites Sprite[]
     ---@field HoldingTab boolean
+    ---@field ManaBar Sprite
     return MothsAflame:GetData(player, "Mittle", nil, {
         SlotSprites = CreateSlotSprites(),
         HoldingTab = false,
+        ManaBar = ManaBarSprite()
     })
 end
 
@@ -88,8 +103,10 @@ end
 local function GetSave(player)
     ---@class MittleSave
     ---@field SelectedSpell integer
+    ---@field Mana number
     return MothsAflame:GetData(player, "Mittle", ksil.DataPersistenceMode.RUN, {
-        SelectedSpell = DEFAULT_SPELL
+        SelectedSpell = DEFAULT_SPELL,
+        Mana = 50
     })
 end
 
@@ -141,8 +158,10 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
 
     if holdingTab then
         for _, sprite in ipairs(data.SlotSprites) do
-            sprite.Color.A = MothsAflame:Lerp(sprite.Color.A, 1, SPELL_UI_FADE_IN)
+            sprite.Color.A = MothsAflame:Lerp(sprite.Color.A, 1, UI_FADE_IN)
         end
+
+        data.ManaBar.Color.A = MothsAflame:Lerp(data.ManaBar.Color.A, 0, UI_FADE_OUT)
 
         for k, v in pairs(ACTION_TO_SPELL_SLOT) do
             if Input.IsActionTriggered(k, player.ControllerIndex) then
@@ -175,8 +194,10 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
         end
     else
         for _, sprite in ipairs(data.SlotSprites) do
-            sprite.Color.A = MothsAflame:Lerp(sprite.Color.A, 0, SPELL_UI_FADE_OUT)
+            sprite.Color.A = MothsAflame:Lerp(sprite.Color.A, 0, UI_FADE_OUT)
         end
+
+        data.ManaBar.Color.A = MothsAflame:Lerp(data.ManaBar.Color.A, 1, UI_FADE_IN)
     end
 
     if not holdingTab and data.HoldingTab then
@@ -192,11 +213,9 @@ end)
 
 ---@param player EntityPlayer
 local function OnRender(player)
-    -- if Game():GetRoom():GetRenderMode() == RenderMode.RENDER_WATER_REFLECT then return end
-
     local data = GetData(player)
 
-    if data.SlotSprites[1].Color.A > 0.0005 then
+    if data.SlotSprites[1].Color.A > RENDER_ALPHA_THRESHOLD then
         local playerPos = GetSlotAnchor(player)
 
         for i, sprite in ipairs(data.SlotSprites) do
@@ -219,21 +238,20 @@ if REPENTOGON then
         end
     end)
 else
-    -- ---@param str string
-    -- MothsAflame:AddCallback(ModCallbacks.MC_GET_SHADER_PARAMS, function (_, str)
-    --     if str ~= MothsAflame.Shader.HUD then return end
-
-    --     if not Game():IsPaused() then
-    --         for _, player in ipairs(MothsAflame:GetPlayers()) do
-    --             OnRender(player)
-    --         end
-    --     end
-    -- end)
     MothsAflame:AddCallback(ModCallbacks.MC_POST_RENDER, function ()
-        -- if Game():IsPaused() then
-            for _, player in ipairs(MothsAflame:GetPlayers()) do
-                OnRender(player)
-            end
-        -- end
+        for _, player in ipairs(MothsAflame:GetPlayers()) do
+            OnRender(player)
+        end
     end)
 end
+
+---@param player EntityPlayer
+MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function (_, player)
+    if Game():GetRoom():GetRenderMode() == RenderMode.RENDER_WATER_REFLECT then return end
+
+    local data = GetData(player)
+
+    if data.ManaBar.Color.A > RENDER_ALPHA_THRESHOLD then
+        data.ManaBar:Render(Isaac.WorldToScreen(player.Position) + MANA_BAR_OFFSET + SPRITESCALE_Y_OFFSET * (player.SpriteScale.Y - 1))
+    end
+end)
