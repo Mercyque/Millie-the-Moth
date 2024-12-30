@@ -137,6 +137,10 @@ local function SelectSpell(player, index, noSFX)
     local save = GetSave(player)
     local data = GetData(player)
 
+    if save.SelectedSpell ~= index and not noSFX then
+        SFXManager():Play(SoundEffect.SOUND_CHARACTER_SELECT_RIGHT)
+    end
+
     save.SelectedSpell = index
 
     for i, sprite in ipairs(data.SlotSprites) do
@@ -261,7 +265,7 @@ end
 
 ---@param player EntityPlayer
 MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function (_, player)
-    if Game():GetRoom():GetRenderMode() == RenderMode.RENDER_WATER_REFLECT then return end
+    if player:GetPlayerType() ~= MothsAflame.Character.MITTLE or Game():GetRoom():GetRenderMode() == RenderMode.RENDER_WATER_REFLECT then return end
 
     local data = GetData(player)
 
