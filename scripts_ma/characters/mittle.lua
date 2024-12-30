@@ -14,6 +14,7 @@ local RENDER_ALPHA_THRESHOLD = 0.0005
 local SPELL_NAME_OFFSET = 45
 local SPELL_NAME_LINE_SPACING = 10
 local MANA_BAR_OFFSET = Vector(0, -40)
+local MANA_BAR_NUM_FRAMES = 26
 local SPRITESCALE_Y_OFFSET = Vector(0, -34)
 local SpellSlot = {
     RIGHT = 1,
@@ -150,6 +151,19 @@ local function SelectSpell(player, index, noSFX)
 end
 
 ---@param player EntityPlayer
+---@param amt number
+local function SetMana(player, amt)
+    amt = MothsAflame:Clamp(amt, 0, 100)
+
+    local save = GetSave(player)
+    local data = GetData(player)
+
+    save.Mana = amt
+
+    data.ManaBar:SetFrame(math.floor((1 - amt / 100) * (MANA_BAR_NUM_FRAMES - 1)))
+end
+
+---@param player EntityPlayer
 MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
     if player:GetPlayerType() ~= MothsAflame.Character.MITTLE then return end
 
@@ -254,4 +268,12 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function (_, player)
     if data.ManaBar.Color.A > RENDER_ALPHA_THRESHOLD then
         data.ManaBar:Render(Isaac.WorldToScreen(player.Position) + MANA_BAR_OFFSET + SPRITESCALE_Y_OFFSET * (player.SpriteScale.Y - 1))
     end
+end)
+
+---Testing
+---@param str string
+---@param arg string
+MothsAflame:AddCallback(ModCallbacks.MC_EXECUTE_CMD, function (_, str, arg)
+    if str ~= "mana" then return end
+    SetMana(Isaac.GetPlayer(), tonumber(arg) or 0)
 end)
