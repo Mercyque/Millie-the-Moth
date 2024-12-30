@@ -5,9 +5,9 @@ local SPELL_UI_Y_OFFSET = Vector(0, -17.5)
 local SPELL_SELECT_MOUSE_RANGE = math.huge
 local DEFAULT_SPELL = NUM_SPELL_SLOTS + 1
 local SLOT_OFFSETS = {
-    Vector(40, 0),
+    Vector(35, 0),
     Vector(0, 35),
-    Vector(-40, 0),
+    Vector(-35, 0),
     Vector(0, -35)
 }
 local RENDER_ALPHA_THRESHOLD = 0.0005
