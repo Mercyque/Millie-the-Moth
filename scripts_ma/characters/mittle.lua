@@ -1,11 +1,35 @@
-local NUM_SPELL_SLOTS = 5
+local NUM_SPELL_SLOTS = 4
 local SPELL_UI_FADE_IN = 0.3
 local SPELL_UI_FADE_OUT = 0.6
-local SPELL_SLOT_SPREAD = Vector(17.5, 0)
-local SPELL_UI_Y_OFFSET = Vector(0, -40)
-local SPELL_UI_OFFSET_SPRITESCALE = Vector(0, -32)
+local SPELL_SLOT_SPREAD = 40
+local SPELL_UI_Y_OFFSET = Vector(0, -17.5)
 local SPELL_SELECT_MOUSE_RANGE = math.huge
-local DEFAULT_SPELL = (NUM_SPELL_SLOTS + 1) // 2
+local DEFAULT_SPELL = NUM_SPELL_SLOTS + 1
+local SLOT_OFFSETS = {
+    Vector(SPELL_SLOT_SPREAD, 0),
+    Vector(0, SPELL_SLOT_SPREAD),
+    Vector(-SPELL_SLOT_SPREAD, 0),
+    Vector(0, -SPELL_SLOT_SPREAD)
+}
+local SpellSlot = {
+    RIGHT = 1,
+    DOWN = 2,
+    LEFT = 3,
+    UP = 4,
+}
+local Spell = {
+    WATER = 1,
+    AIR = 2,
+    FIRE = 3,
+    EARTH = 4,
+    CANTRIP = 5,
+}
+local ACTION_TO_SPELL_SLOT  = {
+    [ButtonAction.ACTION_SHOOTRIGHT] = SpellSlot.RIGHT,
+    [ButtonAction.ACTION_SHOOTDOWN] = SpellSlot.DOWN,
+    [ButtonAction.ACTION_SHOOTLEFT] = SpellSlot.LEFT,
+    [ButtonAction.ACTION_SHOOTUP] = SpellSlot.UP,
+}
 
 ---@return Sprite
 local function FrameSprite()
@@ -53,13 +77,13 @@ end
 ---@param player EntityPlayer
 ---@return Vector
 local function GetSlotAnchor(player)
-    return Isaac.WorldToScreen(player.Position) + SPELL_UI_Y_OFFSET + SPELL_UI_OFFSET_SPRITESCALE * (player.SpriteScale.Y - 1)
+    return Isaac.WorldToScreen(player.Position) + SPELL_UI_Y_OFFSET
 end
 
 ---@param index integer
 ---@return Vector
 local function GetSlotOffset(index)
-    return SPELL_SLOT_SPREAD * index - SPELL_SLOT_SPREAD * (NUM_SPELL_SLOTS + 1) / 2
+    return SLOT_OFFSETS[index]
 end
 
 ---@param player EntityPlayer
@@ -75,20 +99,6 @@ end
 local function SelectSpell(player, index, noSFX)
     local save = GetSave(player)
     local data = GetData(player)
-
-    if not noSFX then
-        if index > save.SelectedSpell then
-            SFXManager():Play(SoundEffect.SOUND_CHARACTER_SELECT_RIGHT, nil, 0)
-        elseif index < save.SelectedSpell then
-            SFXManager():Play(SoundEffect.SOUND_CHARACTER_SELECT_LEFT, nil, 0)
-        end
-    end
-
-    if index > NUM_SPELL_SLOTS then
-        index = 1
-    elseif index < 1 then
-        index = NUM_SPELL_SLOTS
-    end
 
     save.SelectedSpell = index
 
@@ -115,14 +125,10 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
             sprite.Color.A = MothsAflame:Lerp(sprite.Color.A, 1, SPELL_UI_FADE_IN)
         end
 
-        local save = GetSave(player)
-
-        if Input.IsActionTriggered(ButtonAction.ACTION_SHOOTRIGHT, player.ControllerIndex) then
-            SelectSpell(player, save.SelectedSpell + 1)
-        end
-
-        if Input.IsActionTriggered(ButtonAction.ACTION_SHOOTLEFT, player.ControllerIndex) then
-            SelectSpell(player, save.SelectedSpell - 1)
+        for k, v in pairs(ACTION_TO_SPELL_SLOT) do
+            if Input.IsActionTriggered(k, player.ControllerIndex) then
+                SelectSpell(player, v)
+            end
         end
 
         if player:IsExtraAnimationFinished() then
@@ -165,13 +171,13 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
     data.HoldingTab = holdingTab
 end)
 
--- ---@param player EntityPlayer
--- local function TempSelectionRenderer(player)
---     local save = GetSave(player)
---     local pos = Isaac.WorldToScreen(player.Position)
+---@param player EntityPlayer
+local function TempSelectionRenderer(player)
+    local save = GetSave(player)
+    local pos = Isaac.WorldToScreen(player.Position)
 
---     Isaac.RenderText(tostring(save.SelectedSpell), pos.X - 20, pos.Y, 1, 1, 1, 1)
--- end
+    Isaac.RenderText(tostring(save.SelectedSpell), pos.X - 20, pos.Y, 1, 1, 1, 1)
+end
 
 ---@param player EntityPlayer
 MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function (_, player)
@@ -179,7 +185,7 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function (_, player)
 
     local data = GetData(player)
 
-    -- TempSelectionRenderer(player)
+    TempSelectionRenderer(player)
 
     if data.SlotSprites[1].Color.A > 0.0005 then
         local playerPos = GetSlotAnchor(player)
