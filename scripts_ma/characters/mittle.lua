@@ -192,7 +192,7 @@ end)
 
 ---@param player EntityPlayer
 local function OnRender(player)
-    if Game():GetRoom():GetRenderMode() == RenderMode.RENDER_WATER_REFLECT then return end
+    -- if Game():GetRoom():GetRenderMode() == RenderMode.RENDER_WATER_REFLECT then return end
 
     local data = GetData(player)
 
@@ -219,21 +219,21 @@ if REPENTOGON then
         end
     end)
 else
-    ---@param str string
-    MothsAflame:AddCallback(ModCallbacks.MC_GET_SHADER_PARAMS, function (_, str)
-        if str ~= MothsAflame.Shader.HUD then return end
+    -- ---@param str string
+    -- MothsAflame:AddCallback(ModCallbacks.MC_GET_SHADER_PARAMS, function (_, str)
+    --     if str ~= MothsAflame.Shader.HUD then return end
 
-        if not Game():IsPaused() then
-            for _, player in ipairs(MothsAflame:GetPlayers()) do
-                OnRender(player)
-            end
-        end
-    end)
+    --     if not Game():IsPaused() then
+    --         for _, player in ipairs(MothsAflame:GetPlayers()) do
+    --             OnRender(player)
+    --         end
+    --     end
+    -- end)
     MothsAflame:AddCallback(ModCallbacks.MC_POST_RENDER, function ()
-        if Game():IsPaused() then
+        -- if Game():IsPaused() then
             for _, player in ipairs(MothsAflame:GetPlayers()) do
                 OnRender(player)
             end
-        end
+        -- end
     end)
 end
