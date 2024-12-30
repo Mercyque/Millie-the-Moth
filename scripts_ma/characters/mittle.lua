@@ -16,38 +16,38 @@ local SPELL_NAME_LINE_SPACING = 10
 local MANA_BAR_OFFSET = Vector(0, -40)
 local MANA_BAR_NUM_FRAMES = 26
 local SPRITESCALE_Y_OFFSET = Vector(0, -34)
-local SpellSlot = {
+MothsAflame.SpellSlot = {
     RIGHT = 1,
     DOWN = 2,
     LEFT = 3,
     UP = 4,
 }
-local Spell = {
+MothsAflame.Spell = {
     WATER = 1,
     AIR = 2,
     FIRE = 3,
     EARTH = 4,
     CANTRIP = 5,
 }
-local SPELL_TO_NAME = {
-    [Spell.WATER] = {"CREEPING TIDALPILLARS"},
-    [Spell.AIR] = {"SURGING WINDS"},
-    [Spell.FIRE] = {"MOTHS TO THE FLAME"},
-    [Spell.EARTH] = {"CLAY WEAVERS"},
-    [Spell.CANTRIP] = {"CANTRIP!"},
+MothsAflame.SPELL_TO_NAME = {
+    [MothsAflame.Spell.WATER] = {"CREEPING TIDALPILLARS"},
+    [MothsAflame.Spell.AIR] = {"SURGING WINDS"},
+    [MothsAflame.Spell.FIRE] = {"MOTHS TO THE FLAME"},
+    [MothsAflame.Spell.EARTH] = {"CLAY WEAVERS"},
+    [MothsAflame.Spell.CANTRIP] = {"CANTRIP!"},
 }
-local SPELL_TO_GFX = {
-    [Spell.WATER] = "gfx_ma/ui/spell_tidalpillars.png",
-    [Spell.AIR] = "gfx_ma/ui/spell_surgingwinds.png",
-    [Spell.FIRE] = "gfx_ma/ui/spell_mothstotheflame.png",
-    [Spell.EARTH] = "gfx_ma/ui/spell_clayweavers.png",
-    [Spell.CANTRIP] = "",
+MothsAflame.SPELL_TO_GFX = {
+    [MothsAflame.Spell.WATER] = "gfx_ma/ui/spell_tidalpillars.png",
+    [MothsAflame.Spell.AIR] = "gfx_ma/ui/spell_surgingwinds.png",
+    [MothsAflame.Spell.FIRE] = "gfx_ma/ui/spell_mothstotheflame.png",
+    [MothsAflame.Spell.EARTH] = "gfx_ma/ui/spell_clayweavers.png",
+    [MothsAflame.Spell.CANTRIP] = "",
 }
-local ACTION_TO_SPELL_SLOT  = {
-    [ButtonAction.ACTION_SHOOTRIGHT] = SpellSlot.RIGHT,
-    [ButtonAction.ACTION_SHOOTDOWN] = SpellSlot.DOWN,
-    [ButtonAction.ACTION_SHOOTLEFT] = SpellSlot.LEFT,
-    [ButtonAction.ACTION_SHOOTUP] = SpellSlot.UP,
+MothsAflame.ACTION_TO_SPELL_SLOT  = {
+    [ButtonAction.ACTION_SHOOTRIGHT] = MothsAflame.SpellSlot.RIGHT,
+    [ButtonAction.ACTION_SHOOTDOWN] = MothsAflame.SpellSlot.DOWN,
+    [ButtonAction.ACTION_SHOOTLEFT] = MothsAflame.SpellSlot.LEFT,
+    [ButtonAction.ACTION_SHOOTUP] = MothsAflame.SpellSlot.UP,
 }
 local spellFont = Font() spellFont:Load("font/luaminioutlined.fnt")
 
@@ -58,7 +58,7 @@ local function FrameSprite(index)
 
     sprite:Load("gfx_ma/ui_spell.anm2", true)
     sprite:Play("Idle", true)
-    sprite:ReplaceSpritesheet(0, SPELL_TO_GFX[index])
+    sprite:ReplaceSpritesheet(0, MothsAflame.SPELL_TO_GFX[index])
     sprite:LoadGraphics()
     sprite.Color = MothsAflame.Color.WHITE_ZERO_ALPHA
 
@@ -88,7 +88,7 @@ local function CreateSlotSprites()
 end
 
 ---@param player EntityPlayer
-local function GetData(player)
+function MothsAflame:GetMittleData(player)
     ---@class MittleData
     ---@field SlotSprites Sprite[]
     ---@field HoldingTab boolean
@@ -101,7 +101,7 @@ local function GetData(player)
 end
 
 ---@param player EntityPlayer
-local function GetSave(player)
+function MothsAflame:GetMittleSave(player)
     ---@class MittleSave
     ---@field SelectedSpell integer
     ---@field Mana number
@@ -134,8 +134,8 @@ end
 ---@param index integer
 ---@param noSFX? boolean
 local function SelectSpell(player, index, noSFX)
-    local save = GetSave(player)
-    local data = GetData(player)
+    local save = MothsAflame:GetMittleSave(player)
+    local data = MothsAflame:GetMittleData(player)
 
     if save.SelectedSpell ~= index and not noSFX then
         SFXManager():Play(SoundEffect.SOUND_CHARACTER_SELECT_RIGHT)
@@ -159,8 +159,8 @@ end
 local function SetMana(player, amt)
     amt = MothsAflame:Clamp(amt, 0, 100)
 
-    local save = GetSave(player)
-    local data = GetData(player)
+    local save = MothsAflame:GetMittleSave(player)
+    local data = MothsAflame:GetMittleData(player)
 
     save.Mana = amt
 
@@ -171,7 +171,7 @@ end
 MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
     if player:GetPlayerType() ~= MothsAflame.Character.MITTLE then return end
 
-    local data = GetData(player)
+    local data = MothsAflame:GetMittleData(player)
     local holdingTab = Input.IsActionPressed(ButtonAction.ACTION_MAP, player.ControllerIndex)
 
     if holdingTab then
@@ -181,7 +181,7 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
 
         data.ManaBar.Color.A = MothsAflame:Lerp(data.ManaBar.Color.A, 0, UI_FADE_OUT)
 
-        for k, v in pairs(ACTION_TO_SPELL_SLOT) do
+        for k, v in pairs(MothsAflame.ACTION_TO_SPELL_SLOT) do
             if Input.IsActionTriggered(k, player.ControllerIndex) then
                 SelectSpell(player, v)
             end
@@ -227,11 +227,13 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
     end
 
     data.HoldingTab = holdingTab
+
+    local save = MothsAflame:GetMittleSave(player)
 end)
 
 ---@param player EntityPlayer
 local function OnRender(player)
-    local data = GetData(player)
+    local data = MothsAflame:GetMittleData(player)
 
     if data.SlotSprites[1].Color.A > RENDER_ALPHA_THRESHOLD then
         local playerPos = GetSlotAnchor(player)
@@ -242,7 +244,7 @@ local function OnRender(player)
             sprite:Render(adjustedPos)
         end
 
-        for i, v in pairs(SPELL_TO_NAME[GetSave(player).SelectedSpell]) do
+        for i, v in pairs(MothsAflame.SPELL_TO_NAME[MothsAflame:GetMittleSave(player).SelectedSpell]) do
             spellFont:DrawString(v, playerPos.X, playerPos.Y + SPELL_NAME_LINE_SPACING * (i - 1) + SPELL_NAME_OFFSET, KColor(1, 1, 1, data.SlotSprites[1].Color.A), 1, true)
         end
     end
@@ -267,7 +269,7 @@ end
 MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function (_, player)
     if player:GetPlayerType() ~= MothsAflame.Character.MITTLE or Game():GetRoom():GetRenderMode() == RenderMode.RENDER_WATER_REFLECT then return end
 
-    local data = GetData(player)
+    local data = MothsAflame:GetMittleData(player)
 
     if data.ManaBar.Color.A > RENDER_ALPHA_THRESHOLD then
         data.ManaBar:Render(Isaac.WorldToScreen(player.Position) + MANA_BAR_OFFSET + SPRITESCALE_Y_OFFSET * (player.SpriteScale.Y - 1))
