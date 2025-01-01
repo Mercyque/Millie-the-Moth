@@ -1,3 +1,4 @@
+---@enum MothsAflame.SpellSlot
 MothsAflame.SpellSlot = {
     RIGHT = 1,
     DOWN = 2,
@@ -5,19 +6,27 @@ MothsAflame.SpellSlot = {
     UP = 4,
     NULL = -1,
 }
+
+---@enum MothsAflame.Spell
+MothsAflame.Spell = {
+    WATER = 1,
+    AIR = 2,
+    FIRE = 3,
+    EARTH = 4,
+    CANTRIP = 5
+}
+
 ---@class MothsAflame.SpellConfig
 ---@field SLOT integer
----@field ID integer
 ---@field NAME string[]
 ---@field GFX string
 ---@field SelectFn fun(player: EntityPlayer)
 ---@field DeselectFn fun(player: EntityPlayer)
 
-MothsAflame.Spell = {
-    ---@type MothsAflame.SpellConfig
-    Water = {
+---@type table<MothsAflame.Spell, MothsAflame.SpellConfig>
+MothsAflame.SpellConfig = {
+    {
         SLOT = MothsAflame.SpellSlot.RIGHT,
-        ID = 1,
         NAME = {"CREEPING TIDALPILLARS"},
         GFX = "gfx_ma/ui/spell_tidalpillars.png",
         SelectFn = function (player)
@@ -27,10 +36,8 @@ MothsAflame.Spell = {
 
         end,
     },
-    ---@type MothsAflame.SpellConfig
-    Air = {
+    {
         SLOT = MothsAflame.SpellSlot.DOWN,
-        ID = 2,
         NAME = {"SURGING WINDS"},
         GFX = "gfx_ma/ui/spell_surgingwinds.png",
         SelectFn = function (player)
@@ -40,10 +47,8 @@ MothsAflame.Spell = {
 
         end,
     },
-    ---@type MothsAflame.SpellConfig
-    Fire = {
+    {
         SLOT = MothsAflame.SpellSlot.LEFT,
-        ID = 3,
         NAME = {"MOTHS TO THE FLAME"},
         GFX = "gfx_ma/ui/spell_mothstotheflame.png",
         SelectFn = function (player)
@@ -53,10 +58,8 @@ MothsAflame.Spell = {
 
         end,
     },
-    ---@type MothsAflame.SpellConfig
-    Earth = {
+    {
         SLOT = MothsAflame.SpellSlot.UP,
-        ID = 4,
         NAME = {"CLAY WEAVERS"},
         GFX = "gfx_ma/ui/spell_clayweavers.png",
         SelectFn = function (player)
@@ -66,10 +69,8 @@ MothsAflame.Spell = {
 
         end,
     },
-    ---@type MothsAflame.SpellConfig
-    Cantrip = {
+    {
         SLOT = MothsAflame.SpellSlot.NULL,
-        ID = 5,
         NAME =  {"CANTRIP!"},
         GFX = "",
         SelectFn = function (player)
@@ -79,13 +80,6 @@ MothsAflame.Spell = {
 
         end,
     }
-}
-local SPELL_BY_ID = {
-    [MothsAflame.Spell.Water.ID] = MothsAflame.Spell.Water,
-    [MothsAflame.Spell.Air.ID] = MothsAflame.Spell.Air,
-    [MothsAflame.Spell.Fire.ID] = MothsAflame.Spell.Fire,
-    [MothsAflame.Spell.Earth.ID] = MothsAflame.Spell.Earth,
-    [MothsAflame.Spell.Cantrip.ID] = MothsAflame.Spell.Cantrip,
 }
 MothsAflame.ACTION_TO_SPELL_SLOT  = {
     [ButtonAction.ACTION_SHOOTRIGHT] = MothsAflame.SpellSlot.RIGHT,
@@ -119,7 +113,7 @@ local function FrameSprite(index)
 
     sprite:Load("gfx_ma/ui_spell.anm2", true)
     sprite:Play("Idle", true)
-    sprite:ReplaceSpritesheet(0, SPELL_BY_ID[index].GFX)
+    sprite:ReplaceSpritesheet(0, MothsAflame.SpellConfig[index].GFX)
     sprite:LoadGraphics()
     sprite.Color = MothsAflame.Color.WHITE_ZERO_ALPHA
 
@@ -141,7 +135,7 @@ local function CreateSlotSprites()
     ---@type Sprite[]
     local sprites = {}
 
-    for i = MothsAflame.Spell.Water.ID, MothsAflame.Spell.Earth.ID do
+    for i = MothsAflame.Spell.WATER, MothsAflame.Spell.EARTH do
         sprites[i] = FrameSprite(i)
     end
 
@@ -167,7 +161,7 @@ function MothsAflame:GetMittleSave(player)
     ---@field SelectedSpell integer
     ---@field Mana number
     return MothsAflame:GetData(player, "Mittle", ksil.DataPersistenceMode.RUN, {
-        SelectedSpell = MothsAflame.Spell.Cantrip.ID,
+        SelectedSpell = MothsAflame.Spell.CANTRIP,
         Mana = 50
     })
 end
@@ -205,8 +199,8 @@ local function SelectSpell(player, index, noSFX)
         SFXManager():Play(SoundEffect.SOUND_CHARACTER_SELECT_RIGHT)
     end
 
-    SPELL_BY_ID[save.SelectedSpell].DeselectFn(player)
-    SPELL_BY_ID[index].SelectFn(player)
+    MothsAflame.SpellConfig[save.SelectedSpell].DeselectFn(player)
+    MothsAflame.SpellConfig[index].SelectFn(player)
 
     save.SelectedSpell = index
 
@@ -263,7 +257,7 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
                 local mousePos = Isaac.WorldToScreen(Input.GetMousePosition(true))
                 local closestSlot, closestPos
 
-                for i = MothsAflame.Spell.Water.ID, MothsAflame.Spell.Earth.ID do
+                for i = MothsAflame.Spell.WATER, MothsAflame.Spell.EARTH do
                     local slotPos = GetSlotPos(player, i)
 
                     if not closestSlot or mousePos:Distance(slotPos) < mousePos:Distance(closestPos) then
@@ -290,12 +284,10 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
     end
 
     if holdingTab and not data.HoldingTab then
-        SelectSpell(player, MothsAflame.Spell.Cantrip.ID, true)
+        SelectSpell(player, MothsAflame.Spell.CANTRIP, true)
     end
 
     data.HoldingTab = holdingTab
-
-    local save = MothsAflame:GetMittleSave(player)
 end)
 
 ---@param player EntityPlayer
@@ -311,7 +303,7 @@ local function OnRender(player)
             sprite:Render(adjustedPos)
         end
 
-        for i, v in pairs(SPELL_BY_ID[MothsAflame:GetMittleSave(player).SelectedSpell].NAME) do
+        for i, v in pairs(MothsAflame.SpellConfig[MothsAflame:GetMittleSave(player).SelectedSpell].NAME) do
             spellFont:DrawString(v, playerPos.X, playerPos.Y + SPELL_NAME_LINE_SPACING * (i - 1) + SPELL_NAME_OFFSET, KColor(1, 1, 1, data.SlotSprites[1].Color.A), 1, true)
         end
     end
