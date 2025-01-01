@@ -191,7 +191,7 @@ end
 ---@param player EntityPlayer
 ---@param index integer
 ---@param noSFX? boolean
-local function SelectSpell(player, index, noSFX)
+function MothsAflame:SelectSpell(player, index, noSFX)
     local save = MothsAflame:GetMittleSave(player)
     local data = MothsAflame:GetMittleData(player)
 
@@ -217,7 +217,7 @@ end
 
 ---@param player EntityPlayer
 ---@param amt number
-local function SetMana(player, amt)
+function MothsAflame:SetMana(player, amt)
     amt = MothsAflame:Clamp(amt, 0, 100)
 
     local save = MothsAflame:GetMittleSave(player)
@@ -244,7 +244,7 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
 
         for k, v in pairs(MothsAflame.ACTION_TO_SPELL_SLOT) do
             if Input.IsActionTriggered(k, player.ControllerIndex) then
-                SelectSpell(player, v)
+                MothsAflame:SelectSpell(player, v)
             end
         end
 
@@ -267,7 +267,7 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
                 end
 
                 if closestSlot and mousePos:Distance(closestPos) < SPELL_SELECT_MOUSE_RANGE then
-                    SelectSpell(player, closestSlot)
+                    MothsAflame:SelectSpell(player, closestSlot)
                 end
             end
         end
@@ -284,45 +284,32 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
     end
 
     if holdingTab and not data.HoldingTab then
-        SelectSpell(player, MothsAflame.Spell.CANTRIP, true)
+        MothsAflame:SelectSpell(player, MothsAflame.Spell.CANTRIP, true)
     end
 
     data.HoldingTab = holdingTab
 end)
 
----@param player EntityPlayer
-local function OnRender(player)
-    local data = MothsAflame:GetMittleData(player)
+---@diagnostic disable-next-line: undefined-field
+MothsAflame:AddCallback(REPENTOGON and ModCallbacks.MC_HUD_RENDER or ModCallbacks.MC_POST_RENDER, function ()
+    for _, player in ipairs(MothsAflame:GetPlayers()) do
+        local data = MothsAflame:GetMittleData(player)
 
-    if data.SlotSprites[1].Color.A > RENDER_ALPHA_THRESHOLD then
-        local playerPos = GetSlotAnchor(player)
+        if data.SlotSprites[1].Color.A > RENDER_ALPHA_THRESHOLD then
+            local playerPos = GetSlotAnchor(player)
 
-        for i, sprite in ipairs(data.SlotSprites) do
-            local adjustedPos = playerPos + GetSlotOffset(i)
+            for i, sprite in ipairs(data.SlotSprites) do
+                local adjustedPos = playerPos + GetSlotOffset(i)
 
-            sprite:Render(adjustedPos)
-        end
+                sprite:Render(adjustedPos)
+            end
 
-        for i, v in pairs(MothsAflame.SpellConfig[MothsAflame:GetMittleSave(player).SelectedSpell].NAME) do
-            spellFont:DrawString(v, playerPos.X, playerPos.Y + SPELL_NAME_LINE_SPACING * (i - 1) + SPELL_NAME_OFFSET, KColor(1, 1, 1, data.SlotSprites[1].Color.A), 1, true)
+            for i, v in pairs(MothsAflame.SpellConfig[MothsAflame:GetMittleSave(player).SelectedSpell].NAME) do
+                spellFont:DrawString(v, playerPos.X, playerPos.Y + SPELL_NAME_LINE_SPACING * (i - 1) + SPELL_NAME_OFFSET, KColor(1, 1, 1, data.SlotSprites[1].Color.A), 1, true)
+            end
         end
     end
-end
-
-if REPENTOGON then
-    ---@diagnostic disable-next-line: undefined-field
-    MothsAflame:AddCallback(ModCallbacks.MC_HUD_RENDER, function ()
-        for _, player in ipairs(MothsAflame:GetPlayers()) do
-            OnRender(player)
-        end
-    end)
-else
-    MothsAflame:AddCallback(ModCallbacks.MC_POST_RENDER, function ()
-        for _, player in ipairs(MothsAflame:GetPlayers()) do
-            OnRender(player)
-        end
-    end)
-end
+end)
 
 ---@param player EntityPlayer
 MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function (_, player)
@@ -333,12 +320,4 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function (_, player)
     if data.ManaBar.Color.A > RENDER_ALPHA_THRESHOLD then
         data.ManaBar:Render(Isaac.WorldToScreen(player.Position) + MANA_BAR_OFFSET + SPRITESCALE_Y_OFFSET * (player.SpriteScale.Y - 1))
     end
-end)
-
--- Testing
----@param str string
----@param arg string
-MothsAflame:AddCallback(ModCallbacks.MC_EXECUTE_CMD, function (_, str, arg)
-    if str ~= "mana" then return end
-    SetMana(Isaac.GetPlayer(), tonumber(arg) or 0)
 end)
