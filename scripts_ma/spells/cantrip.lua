@@ -14,6 +14,16 @@ local CHARGEBAR_OFFSET = Vector(0, 12.5)
 local SWING_PLAYBACK_SPEED = 1.3
 local CHARGEBAR_LERP = 0.2
 
+---@param entity Entity
+local function SharedUpdate(entity)
+    local cantripData = MothsAflame:GetData(entity, "Cantrip")
+
+    if cantripData.Knockback then
+        entity.Velocity = entity.Velocity + cantripData.Knockback
+        cantripData.Knockback = cantripData.Knockback * KNOCKBACK_FALLOFF
+    end
+end
+
 ---@param player EntityPlayer
 MothsAflame:AddCallback(ModCallbacks.MC_POST_PEFFECT_UPDATE, function (_, player)
     local save = MothsAflame:GetMittleSave(player)
@@ -61,10 +71,7 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PEFFECT_UPDATE, function (_, player
         cantripData.ChargeBar:SetCharge(0)
     end
 
-    if cantripData.Knockback then
-        player.Velocity = player.Velocity + cantripData.Knockback
-        cantripData.Knockback = cantripData.Knockback * KNOCKBACK_FALLOFF
-    end
+    SharedUpdate(player)
 end, MothsAflame.Character.MITTLE)
 
 ---@param familiar EntityFamiliar
@@ -72,6 +79,7 @@ MothsAflame:AddCallback(ModCallbacks.MC_FAMILIAR_UPDATE, function (_, familiar)
     if not (familiar.Player:GetPlayerType() == MothsAflame.Character.MITTLE and MothsAflame:GetMittleSave(familiar.Player).SelectedSpell == MothsAflame.Spell.CANTRIP) then return end
     local weapon = familiar:GetWeapon() if not weapon then return end
     weapon:SetCharge(0)
+    -- SharedUpdate(familiar)
 end)
 
 ---@param player EntityPlayer
@@ -92,7 +100,7 @@ end)
 MothsAflame:AddCallback(ModCallbacks.MC_PRE_KNIFE_UPDATE, function (_, knife)
     if knife.Variant ~= KnifeVariant.BONE_CLUB then return end
 
-    local player = MothsAflame:GetPlayerFromEntity(knife, ksil.PlayerSearchType.ALL) if not (player and player:GetPlayerType() == MothsAflame.Character.MITTLE) then return end
+    local player = MothsAflame:GetPlayerFromEntity(knife, ksil.PlayerSearchType.ALL) if not (player and player:GetPlayerType() == MothsAflame.Character.MITTLE and MothsAflame:GetMittleSave(player).SelectedSpell == MothsAflame.Spell.CANTRIP) then return end
     local sprite = knife:GetSprite()
     local parentData = MothsAflame:GetData(knife.Parent, "Cantrip")
     local swinging = knife:GetIsSwinging()
