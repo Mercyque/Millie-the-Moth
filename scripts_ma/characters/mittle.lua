@@ -23,7 +23,7 @@ MothsAflame.Spell = {
 ---@field SelectFn fun(player: EntityPlayer)
 ---@field DeselectFn fun(player: EntityPlayer)
 
----@type table<MothsAflame.Spell, MothsAflame.SpellConfig>
+---@type MothsAflame.SpellConfig[]
 MothsAflame.SpellConfig = {
     {
         SLOT = MothsAflame.SpellSlot.RIGHT,
@@ -74,10 +74,12 @@ MothsAflame.SpellConfig = {
         NAME =  {"CANTRIP!"},
         GFX = "",
         SelectFn = function (player)
-
+            ---@diagnostic disable-next-line: param-type-mismatch
+            player:AddCacheFlags(CacheFlag.CACHE_WEAPON | CacheFlag.CACHE_FIREDELAY)
         end,
         DeselectFn = function (player)
-
+            ---@diagnostic disable-next-line: param-type-mismatch
+            player:AddCacheFlags(CacheFlag.CACHE_WEAPON | CacheFlag.CACHE_FIREDELAY)
         end,
     }
 }
@@ -158,7 +160,7 @@ end
 ---@param player EntityPlayer
 function MothsAflame:GetMittleSave(player)
     ---@class MittleSave
-    ---@field SelectedSpell integer
+    ---@field SelectedSpell MothsAflame.Spell
     ---@field Mana number
     return MothsAflame:GetData(player, "Mittle", ksil.DataPersistenceMode.RUN, {
         SelectedSpell = MothsAflame.Spell.CANTRIP,
@@ -202,6 +204,8 @@ function MothsAflame:SelectSpell(player, index, noSFX)
     MothsAflame.SpellConfig[save.SelectedSpell].DeselectFn(player)
     MothsAflame.SpellConfig[index].SelectFn(player)
 
+    player:EvaluateItems()
+
     save.SelectedSpell = index
 
     for i, sprite in ipairs(data.SlotSprites) do
@@ -240,8 +244,6 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
             sprite.Color.A = MothsAflame:Lerp(sprite.Color.A, 1, UI_FADE_IN)
         end
 
-        data.ManaBar.Color.A = MothsAflame:Lerp(data.ManaBar.Color.A, 0, UI_FADE_OUT)
-
         for k, v in pairs(MothsAflame.ACTION_TO_SPELL_SLOT) do
             if Input.IsActionTriggered(k, player.ControllerIndex) then
                 MothsAflame:SelectSpell(player, v)
@@ -275,7 +277,11 @@ MothsAflame:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function (_, player)
         for _, sprite in ipairs(data.SlotSprites) do
             sprite.Color.A = MothsAflame:Lerp(sprite.Color.A, 0, UI_FADE_OUT)
         end
+    end
 
+    if holdingTab or player.QueuedItem.Item or player:GetItemState() ~= CollectibleType.COLLECTIBLE_NULL then
+        data.ManaBar.Color.A = MothsAflame:Lerp(data.ManaBar.Color.A, 0, UI_FADE_OUT)
+    else
         data.ManaBar.Color.A = MothsAflame:Lerp(data.ManaBar.Color.A, 1, UI_FADE_IN)
     end
 
